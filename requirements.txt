@@ -1,0 +1,3 @@
+pexpect
+ipykernel
+pygments>=2.1

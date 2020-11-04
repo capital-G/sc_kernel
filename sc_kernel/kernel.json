@@ -1,0 +1,4 @@
+{
+  "argv": ["python", "-m", "sc_kernel", "-f", "{connection_file}"],
+  "display_name": "SuperCollider"
+}
