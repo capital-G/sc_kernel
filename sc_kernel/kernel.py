@@ -60,6 +60,9 @@ class SCLangKernel(Kernel):
 
     def do_execute(self, code, silent, store_history=True,
                    user_expressions=None, allow_stdin=False):
+        if code == '.':
+            code = 'CmdPeriod.run;'
+
         interrupted, output = self._execute_sclang(code)
 
         if not silent:
