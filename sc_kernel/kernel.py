@@ -30,10 +30,10 @@ class SCLangKernel(Kernel):
         return check_output([self.sclang_path, '-v']).decode('utf-8')
 
     language_info = {
-        'mimetype': 'text/supercollider',
-        'name': 'SuperCollider',
-        'file_extension': '.sc',
-        'pygments_lexer': 'sc',  # fix
+        'mimetype': 'text/x-sclang',
+        'name': 'smalltalk',  # although supercollider is included in pygments its not working here
+        'file_extension': '.scd',
+        'pygments_lexer': 'pygments.lexers.supercollider.SuperColliderLexer',
     }
 
     def _start_sclang(self):
