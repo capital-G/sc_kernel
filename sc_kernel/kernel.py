@@ -66,7 +66,7 @@ class SCLangKernel(Kernel):
         interrupted, output = self._execute_sclang(code)
 
         if not silent:
-            stream_content = {'name': 'stdout', 'text': output}
+            stream_content = {'name': 'stdout', 'text': output[1:]}
             self.send_response(self.iopub_socket, 'stream', stream_content)
 
         if interrupted:
