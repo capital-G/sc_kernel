@@ -1,5 +1,5 @@
 from ipykernel.kernelapp import IPKernelApp
 
-from .kernel import SCLangKernel
+from .kernel import SCKernel
 
-IPKernelApp.launch_instance(kernel_class=SCLangKernel)
+IPKernelApp.launch_instance(kernel_class=SCKernel)
