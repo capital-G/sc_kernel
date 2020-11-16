@@ -39,6 +39,7 @@ class SCKernel(ProcessMetaKernel):
     HTML_HELP_FILE_PATH_REGEX = re.compile(r'-> file:\/\/(.*\.html)')
     SCHELP_HELP_FILE_PATH_REGEX = re.compile(r"<a href='file:\/\/(.*\.schelp)'>")
     SC_VERSION_REGEX = re.compile(r'sclang (\d+(\.\d+)+)')
+    METHOD_EXTRACTOR_REGEX = re.compile(r'([A-Z]\w*)\.(.*)')
 
     @property
     def language_version(self):
@@ -104,6 +105,11 @@ class SCKernel(ProcessMetaKernel):
         if '.' not in code:
             # only return classes if no dot is present
             return [c for c in self._sc_classes if c.startswith(code)]
+        if code.count('.') == 1:
+            # @todo too hacky :/
+            sc_class, sc_method = self.METHOD_EXTRACTOR_REGEX.findall(code)[0]
+            output = self._sclang.run_command(f'{sc_class}.dumpAllMethods;')
+            return [f'{sc_class}.{m}' for m in self.METHOD_DUMP_REGEX.findall(output) if m.startswith(sc_method)]
 
     def get_kernel_help_on(self, info, level=0, none_on_fail=False):
         code = info['obj'].split('.')[0]
