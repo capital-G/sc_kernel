@@ -8,7 +8,7 @@ import os
 
 from metakernel import ProcessMetaKernel, REPLWrapper
 
-__version__ = '0.2.0'
+from . import __version__
 
 
 def get_kernel_json():
