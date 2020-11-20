@@ -6,6 +6,7 @@ import re
 from typing import Optional, List
 import os
 
+import pexpect
 from metakernel import ProcessMetaKernel, REPLWrapper
 
 from . import __version__
@@ -66,25 +67,21 @@ class SCKernel(ProcessMetaKernel):
             if p == 'Darwin':
                 sclang_path = '/Applications/SuperCollider.app/Contents/MacOS/sclang'
             if p == 'Windows':
-                pass
+                raise NotImplemented
         return sclang_path
 
     @property
     def _sclang(self) -> REPLWrapper:
         if self.__sclang:
             return self.__sclang
-        self.__sclang = REPLWrapper(
-            self._sclang_path,
-            prompt_regex='sc3> ',
-            prompt_change_cmd=None,
-        )
+        self.__sclang = ScREPLWrapper(f'{self._sclang_path} -i jupyter')
         return self.__sclang
 
     def do_execute_direct(self, code: str, silent=False):
         if code == '.':
             code = 'CmdPeriod.run;'
-        super().do_execute_direct(
-            code=code.rstrip().replace('\n', ' '),
+        return super().do_execute_direct(
+            code=code,
             silent=silent,
         )
 
@@ -92,12 +89,7 @@ class SCKernel(ProcessMetaKernel):
     def _sc_classes(self) -> List[str]:
         if self.__sc_classes:
             return self.__sc_classes
-        self.__sc_classes = self._sclang.run_command("""
-        Class.allClasses.do({|c|
-             c.postln;
-            nil;
-        });
-        """.replace('\n', ' ')).split('\n')[:-1]
+        self.__sc_classes = self._sclang.run_command('Class.allClasses.do({|c| c.postln; nil;})\n').split('\n')[:-1]
         return self.__sc_classes
 
     def get_completions(self, info):
@@ -108,12 +100,12 @@ class SCKernel(ProcessMetaKernel):
         if code.count('.') == 1:
             # @todo too hacky :/
             sc_class, sc_method = self.METHOD_EXTRACTOR_REGEX.findall(code)[0]
-            output = self._sclang.run_command(f'{sc_class}.dumpAllMethods;')
+            output = self._sclang.run_command(f'{sc_class}.dumpAllMethods;', timeout=10)
             return [f'{sc_class}.{m}' for m in self.METHOD_DUMP_REGEX.findall(output) if m.startswith(sc_method)]
 
     def get_kernel_help_on(self, info, level=0, none_on_fail=False):
         code = info['obj'].split('.')[0]
-        output = self._sclang.run_command(f'{code}.helpFilePath')
+        output = self._sclang.run_command(f'{code}.helpFilePath;')
         help_file_paths = self.HTML_HELP_FILE_PATH_REGEX.findall(output)
         if help_file_paths:
             if os.path.isfile(help_file_paths[0]):
@@ -124,5 +116,71 @@ class SCKernel(ProcessMetaKernel):
                     if os.path.isfile(sc_help_file_paths[0]):
                         with open(sc_help_file_paths[0]) as f:
                             return f.read()
-
         return f"Did not find any help for {code}"
+
+
+class ScREPLWrapper(REPLWrapper):
+    def __init__(self, cmd_or_spawn, *args, **kwargs):
+        cmd = pexpect.spawn(
+            cmd_or_spawn,
+            encoding='utf-8'
+        )
+        try:
+            # we wait for the Welcome message and throw everything before it away as well
+            cmd.expect('Welcome to SuperCollider.*', timeout=15)
+        except pexpect.TIMEOUT as e:
+            print(f'Could not start sclang successfully: {e}')
+            raise e
+
+        super().__init__(
+            cmd,
+            prompt_regex='',
+            prompt_change_cmd='',
+            new_prompt_regex="",
+            prompt_emit_cmd="",
+            *args, **kwargs
+        )
+        self.child: pexpect.spawn
+        # increase buffer size so streaming of large data goes much faster
+        # https://pexpect.readthedocs.io/en/stable/api/pexpect.html#spawn-class
+        self.child.maxread = 200000
+        self.child.searchwindowsize = None
+
+    def run_command(self, command, timeout=30, *args, **kwargs):
+        """
+        In order to know when a command was finished and is ready for another prompt
+        we encapsulate every command with
+        "**** JUPYTER ****".postln;
+        command
+        "**** /JUPYTER ****".postln;
+
+        :param timeout: Time to wait for execution, otherwise an Exception will be raised
+        :param command: command to perform
+        :param args:
+        :param kwargs:
+        :return: output of command as a string
+        """
+        # idea from
+        # https://github.com/supercollider/qpm/blob/d3f72894e289744f01f3c098ab0a474d5190315e/qpm/sclang_process.py#L62
+        begin_token = "**** JUPYTER ****"
+        end_token = "**** /JUPYTER ****"
+        regex = re.compile(r'\*{4} JUPYTER \*{4}(.*)\*{4} /JUPYTER \*{4}', re.DOTALL)
+
+        exec_command = '{ var result; "%s".postln; result = {%s}.value(); postf("-> %%\n", result); "%s".postln;}.fork(AppClock);' % (
+            begin_token, command, end_token)
+
+        # 0x1b is the escape key which tells sclang to evaluate any command b/c
+        # we can not use \n as we can have multiple lines in our command
+        self.child.sendline(f'{exec_command}{chr(0x1b)}')
+
+        self.child.expect(regex, timeout=timeout)
+
+        # although \r\n is DOS style it is for some reason used by UNIX, see
+        # https://pexpect.readthedocs.io/en/stable/overview.html#find-the-end-of-line-cr-lf-conventions
+        # we also remove \r\n at start and end of each command with the slicing [2:-2]
+        output = self.child.match.groups()[0][2:-2].replace('\r\n', '\n')
+
+        if 'ERROR: ' in output:
+            output += self.child.readline().replace('\r\n', '\n')
+
+        return output
