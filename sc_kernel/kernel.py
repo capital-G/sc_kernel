@@ -1,12 +1,14 @@
 import json
 import platform
 import sys
+import time
 from subprocess import check_output
 import re
 from typing import Optional, List
 import os
 
 import pexpect
+from IPython.lib.display import Audio
 from metakernel import ProcessMetaKernel, REPLWrapper
 
 from . import __version__
@@ -32,7 +34,7 @@ class SCKernel(ProcessMetaKernel):
         'mimetype': 'text/x-sclang',
         'name': 'smalltalk',  # although supercollider is included in pygments its not working here
         'file_extension': '.scd',
-        'pygments_lexer': 'pygments.lexers.supercollider.SuperColliderLexer',
+        'pygments_lexer': 'supercollider',
     }
     kernel_json = get_kernel_json()
 
@@ -56,6 +58,7 @@ class SCKernel(ProcessMetaKernel):
         self.__sclang: Optional[REPLWrapper] = None
         self.__sc_classes: Optional[List[str]] = None
         self.wrapper = self._sclang
+        self.recording_paths = set()
 
     @staticmethod
     def _get_sclang_path() -> str:
@@ -71,7 +74,7 @@ class SCKernel(ProcessMetaKernel):
         return sclang_path
 
     @property
-    def _sclang(self) -> REPLWrapper:
+    def _sclang(self) -> 'ScREPLWrapper':
         if self.__sclang:
             return self.__sclang
         self.__sclang = ScREPLWrapper(f'{self._sclang_path} -i jupyter')
@@ -84,6 +87,40 @@ class SCKernel(ProcessMetaKernel):
             code=code,
             silent=silent,
         )
+
+    def _check_for_recordings(self, message):
+        """
+        As Jupyter Notebook struggles with audio files that are still written to we can only display
+        audio files once they are fully written.
+        As SuperCollider is only displaying the file name at the end
+
+        :param message:
+        :return:
+        """
+        self.log.error(message)
+        recording_paths: List[str] = self._sclang.RECORD_MATCHER_REGEX.findall(message)
+        self.log.error(f'Recording Paths: {recording_paths}')
+        self.recording_paths.update(recording_paths)
+        self.log.error(f'self.record_paths: {self.recording_paths}')
+        for recording_path in recording_paths:
+            self.log.info(f'Found new recording: {recording_path}')
+
+        finished_recordings: List[str] = self._sclang.RECORDING_STOPPED_REGEX.findall(message)
+
+        displayed_recordings: List[str] = []
+        for finished_recording in finished_recordings:
+            for recording_path in [f for f in self.recording_paths if finished_recording in f]:
+                time.sleep(1.0)  # wait for finished writing, just in case
+                self.log.error(f'Found finished recording: {recording_path}')
+                self.Display(Audio(filename=recording_path))
+                displayed_recordings.append(recording_path)
+            else:
+                self.log.error(f'Found finished recording without captured path: {finished_recording}')
+        self.recording_paths.difference(displayed_recordings)
+
+    def Write(self, message):
+        self._check_for_recordings(message)
+        super().Write(message)
 
     @property
     def _sc_classes(self) -> List[str]:
@@ -146,6 +183,12 @@ class ScREPLWrapper(REPLWrapper):
         self.child.maxread = 200000
         self.child.searchwindowsize = None
 
+    BEGIN_TOKEN = "**** JUPYTER ****"
+    END_TOKEN = "**** /JUPYTER ****"
+    COMMAND_REGEX = re.compile(r'\*{4} JUPYTER \*{4}(.*)\*{4} /JUPYTER \*{4}', re.DOTALL)
+    RECORD_MATCHER_REGEX = re.compile(r"Recording channels \[[\d ,]*\] \.\.\. \npath: \'(.*)'", re.MULTILINE)
+    RECORDING_STOPPED_REGEX = re.compile(r'Recording Stopped: \((.*)\)')
+
     def run_command(self, command, timeout=30, *args, **kwargs):
         """
         In order to know when a command was finished and is ready for another prompt
@@ -162,18 +205,15 @@ class ScREPLWrapper(REPLWrapper):
         """
         # idea from
         # https://github.com/supercollider/qpm/blob/d3f72894e289744f01f3c098ab0a474d5190315e/qpm/sclang_process.py#L62
-        begin_token = "**** JUPYTER ****"
-        end_token = "**** /JUPYTER ****"
-        regex = re.compile(r'\*{4} JUPYTER \*{4}(.*)\*{4} /JUPYTER \*{4}', re.DOTALL)
 
         exec_command = '{ var result; "%s".postln; result = {%s}.value(); postf("-> %%\n", result); "%s".postln;}.fork(AppClock);' % (
-            begin_token, command, end_token)
+            self.BEGIN_TOKEN, command, self.END_TOKEN)
 
         # 0x1b is the escape key which tells sclang to evaluate any command b/c
         # we can not use \n as we can have multiple lines in our command
         self.child.sendline(f'{exec_command}{chr(0x1b)}')
 
-        self.child.expect(regex, timeout=timeout)
+        self.child.expect(self.COMMAND_REGEX, timeout=timeout)
 
         # although \r\n is DOS style it is for some reason used by UNIX, see
         # https://pexpect.readthedocs.io/en/stable/overview.html#find-the-end-of-line-cr-lf-conventions
