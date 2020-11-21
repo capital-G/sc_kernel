@@ -97,11 +97,8 @@ class SCKernel(ProcessMetaKernel):
         :param message:
         :return:
         """
-        self.log.error(message)
         recording_paths: List[str] = self._sclang.RECORD_MATCHER_REGEX.findall(message)
-        self.log.error(f'Recording Paths: {recording_paths}')
         self.recording_paths.update(recording_paths)
-        self.log.error(f'self.record_paths: {self.recording_paths}')
         for recording_path in recording_paths:
             self.log.info(f'Found new recording: {recording_path}')
 
@@ -110,13 +107,11 @@ class SCKernel(ProcessMetaKernel):
         displayed_recordings: List[str] = []
         for finished_recording in finished_recordings:
             for recording_path in [f for f in self.recording_paths if finished_recording in f]:
+                self.log.info(f'Found finished recording: {recording_path}')
                 time.sleep(1.0)  # wait for finished writing, just in case
-                self.log.error(f'Found finished recording: {recording_path}')
                 self.Display(Audio(filename=recording_path))
                 displayed_recordings.append(recording_path)
-            else:
-                self.log.error(f'Found finished recording without captured path: {finished_recording}')
-        self.recording_paths.difference(displayed_recordings)
+        self.recording_paths.difference_update(displayed_recordings)
 
     def Write(self, message):
         self._check_for_recordings(message)
