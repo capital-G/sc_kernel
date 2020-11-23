@@ -4,8 +4,8 @@ from setuptools.command.install import install
 
 with open('sc_kernel/__init__.py', 'rb') as fid:
     for line in fid:
-        line = line.decode('utf-8')
-        if line.startswith('__version__'):
+        line = line.decode('utf-8')  # type: ignore
+        if line.startswith('__version__'):  # type: ignore
             version = line.strip().split()[-1][1:-1]
             break
 
