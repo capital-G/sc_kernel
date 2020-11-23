@@ -71,7 +71,7 @@ class SCKernel(ProcessMetaKernel):
             if p == 'Darwin':
                 sclang_path = '/Applications/SuperCollider.app/Contents/MacOS/sclang'
             if p == 'Windows':
-                raise NotImplemented
+                raise NotImplementedError
         return sclang_path
 
     @property
@@ -91,7 +91,7 @@ class SCKernel(ProcessMetaKernel):
             # for available SC formats
             _, file_ext = os.path.splitext(file_recording)
             if file_ext.lower() not in ['.flac', '.wav']:
-                self.log.error(f'Only FLAC and WAV is supported for browser playback!')
+                self.log.error('Only FLAC and WAV is supported for browser playback!')
             file_path = os.path.join(os.getcwd(), file_recording)
             self.log.info(f'Start recording to {file_path}')
             recording_code = f"""
@@ -226,8 +226,8 @@ class ScREPLWrapper(REPLWrapper):
         # idea from
         # https://github.com/supercollider/qpm/blob/d3f72894e289744f01f3c098ab0a474d5190315e/qpm/sclang_process.py#L62
 
-        exec_command = '{ var result; "%s".postln; result = {%s}.value(); postf("-> %%\n", result); "%s".postln;}.fork(AppClock);' % (
-            self.BEGIN_TOKEN, command, self.END_TOKEN)
+        exec_command = '{ var result; "%s".postln; result = {%s}.value(); postf("-> %%\n", result); "%s".postln;}.fork(AppClock);' % (  # noqa
+            self.BEGIN_TOKEN, command, self.END_TOKEN)  # noqa
 
         # 0x1b is the escape key which tells sclang to evaluate any command b/c
         # we can not use \n as we can have multiple lines in our command
