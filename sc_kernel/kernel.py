@@ -43,6 +43,7 @@ class SCKernel(ProcessMetaKernel):
     SCHELP_HELP_FILE_PATH_REGEX = re.compile(r"<a href='file:\/\/(.*\.schelp)'>")
     SC_VERSION_REGEX = re.compile(r'sclang (\d+(\.\d+)+)')
     METHOD_EXTRACTOR_REGEX = re.compile(r'([A-Z]\w*)\.(.*)')
+    RECORD_MAGIC_REGEX = re.compile(r'%%\s?record \"?([A-z \.]*)\"?')
 
     @property
     def language_version(self):
@@ -83,6 +84,25 @@ class SCKernel(ProcessMetaKernel):
     def do_execute_direct(self, code: str, silent=False):
         if code == '.':
             code = 'CmdPeriod.run;'
+        for file_recording in self.RECORD_MAGIC_REGEX.findall(code):
+            # check https://en.wikipedia.org/wiki/HTML5_audio#Supported_audio_coding_formats
+            # for available formats in a browser and
+            # http://doc.sccode.org/Classes/SoundFile.html#-headerFormat
+            # for available SC formats
+            _, file_ext = os.path.splitext(file_recording)
+            if file_ext.lower() not in ['.flac', '.wav']:
+                self.log.error(f'Only FLAC and WAV is supported for browser playback!')
+            file_path = os.path.join(os.getcwd(), file_recording)
+            self.log.info(f'Start recording to {file_path}')
+            recording_code = f"""
+            s.recorder.recHeaderFormat = "{file_ext[1:]}";
+            s.recorder.recSampleFormat = "int24";
+            s.record("{file_path}");
+            """
+            code = recording_code + code
+            # remove magic from code execution
+            code = self.RECORD_MAGIC_REGEX.sub('', code)
+
         return super().do_execute_direct(
             code=code,
             silent=silent,
