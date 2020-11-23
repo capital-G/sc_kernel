@@ -1,12 +1,14 @@
 import json
 import platform
 import sys
+import time
 from subprocess import check_output
 import re
 from typing import Optional, List
 import os
 
 import pexpect
+from IPython.lib.display import Audio
 from metakernel import ProcessMetaKernel, REPLWrapper
 
 from . import __version__
@@ -32,7 +34,7 @@ class SCKernel(ProcessMetaKernel):
         'mimetype': 'text/x-sclang',
         'name': 'smalltalk',  # although supercollider is included in pygments its not working here
         'file_extension': '.scd',
-        'pygments_lexer': 'pygments.lexers.supercollider.SuperColliderLexer',
+        'pygments_lexer': 'supercollider',
     }
     kernel_json = get_kernel_json()
 
@@ -41,6 +43,7 @@ class SCKernel(ProcessMetaKernel):
     SCHELP_HELP_FILE_PATH_REGEX = re.compile(r"<a href='file:\/\/(.*\.schelp)'>")
     SC_VERSION_REGEX = re.compile(r'sclang (\d+(\.\d+)+)')
     METHOD_EXTRACTOR_REGEX = re.compile(r'([A-Z]\w*)\.(.*)')
+    RECORD_MAGIC_REGEX = re.compile(r'%%\s?record \"?([A-z \.]*)\"?')
 
     @property
     def language_version(self):
@@ -56,6 +59,7 @@ class SCKernel(ProcessMetaKernel):
         self.__sclang: Optional[REPLWrapper] = None
         self.__sc_classes: Optional[List[str]] = None
         self.wrapper = self._sclang
+        self.recording_paths = set()
 
     @staticmethod
     def _get_sclang_path() -> str:
@@ -71,7 +75,7 @@ class SCKernel(ProcessMetaKernel):
         return sclang_path
 
     @property
-    def _sclang(self) -> REPLWrapper:
+    def _sclang(self) -> 'ScREPLWrapper':
         if self.__sclang:
             return self.__sclang
         self.__sclang = ScREPLWrapper(f'{self._sclang_path} -i jupyter')
@@ -80,10 +84,63 @@ class SCKernel(ProcessMetaKernel):
     def do_execute_direct(self, code: str, silent=False):
         if code == '.':
             code = 'CmdPeriod.run;'
+        for file_recording in self.RECORD_MAGIC_REGEX.findall(code):
+            # check https://en.wikipedia.org/wiki/HTML5_audio#Supported_audio_coding_formats
+            # for available formats in a browser and
+            # http://doc.sccode.org/Classes/SoundFile.html#-headerFormat
+            # for available SC formats
+            _, file_ext = os.path.splitext(file_recording)
+            if file_ext.lower() not in ['.flac', '.wav']:
+                self.log.error(f'Only FLAC and WAV is supported for browser playback!')
+            file_path = os.path.join(os.getcwd(), file_recording)
+            self.log.info(f'Start recording to {file_path}')
+            recording_code = f"""
+            s.recorder.recHeaderFormat = "{file_ext[1:]}";
+            s.recorder.recSampleFormat = "int24";
+            s.record("{file_path}");
+            """
+            code = recording_code + code
+            # remove magic from code execution
+            code = self.RECORD_MAGIC_REGEX.sub('', code)
+
         return super().do_execute_direct(
             code=code,
             silent=silent,
         )
+
+    def _check_for_recordings(self, message):
+        """
+        As Jupyter Notebook struggles with audio files that are still written to we can only display
+        audio files once they are fully written.
+        As SuperCollider is only displaying the file name at the end
+
+        :param message:
+        :return:
+        """
+        # we also want to check the output that has been echoed before the matching of the regex
+        # because the SClang recorder works prepares async and we will not capture its output
+        # without preparing the record otherwise, check the docs
+        # https://doc.sccode.org/Classes/Recorder.html
+        message = message + self._sclang.before_output
+        recording_paths: List[str] = self._sclang.RECORD_MATCHER_REGEX.findall(message)
+        self.recording_paths.update(recording_paths)
+        for recording_path in recording_paths:
+            self.log.info(f'Found new recording: {recording_path}')
+
+        finished_recordings: List[str] = self._sclang.RECORDING_STOPPED_REGEX.findall(message)
+
+        displayed_recordings: List[str] = []
+        for finished_recording in finished_recordings:
+            for recording_path in [f for f in self.recording_paths if finished_recording in f]:
+                self.log.info(f'Found finished recording: {recording_path}')
+                time.sleep(1.0)  # wait for finished writing, just in case
+                self.Display(Audio(filename=recording_path))
+                displayed_recordings.append(recording_path)
+        self.recording_paths.difference_update(displayed_recordings)
+
+    def Write(self, message):
+        self._check_for_recordings(message)
+        super().Write(message)
 
     @property
     def _sc_classes(self) -> List[str]:
@@ -146,6 +203,12 @@ class ScREPLWrapper(REPLWrapper):
         self.child.maxread = 200000
         self.child.searchwindowsize = None
 
+    BEGIN_TOKEN = "**** JUPYTER ****"
+    END_TOKEN = "**** /JUPYTER ****"
+    COMMAND_REGEX = re.compile(r'\*{4} JUPYTER \*{4}(.*)\*{4} /JUPYTER \*{4}', re.DOTALL)
+    RECORD_MATCHER_REGEX = re.compile(r"Recording channels \[[\d ,]*\] \.\.\. \npath: \'(.*)'", re.MULTILINE)
+    RECORDING_STOPPED_REGEX = re.compile(r'Recording Stopped: \((.*)\)')
+
     def run_command(self, command, timeout=30, *args, **kwargs):
         """
         In order to know when a command was finished and is ready for another prompt
@@ -162,25 +225,45 @@ class ScREPLWrapper(REPLWrapper):
         """
         # idea from
         # https://github.com/supercollider/qpm/blob/d3f72894e289744f01f3c098ab0a474d5190315e/qpm/sclang_process.py#L62
-        begin_token = "**** JUPYTER ****"
-        end_token = "**** /JUPYTER ****"
-        regex = re.compile(r'\*{4} JUPYTER \*{4}(.*)\*{4} /JUPYTER \*{4}', re.DOTALL)
 
         exec_command = '{ var result; "%s".postln; result = {%s}.value(); postf("-> %%\n", result); "%s".postln;}.fork(AppClock);' % (
-            begin_token, command, end_token)
+            self.BEGIN_TOKEN, command, self.END_TOKEN)
 
         # 0x1b is the escape key which tells sclang to evaluate any command b/c
         # we can not use \n as we can have multiple lines in our command
         self.child.sendline(f'{exec_command}{chr(0x1b)}')
 
-        self.child.expect(regex, timeout=timeout)
+        self.child.expect(self.COMMAND_REGEX, timeout=timeout)
 
         # although \r\n is DOS style it is for some reason used by UNIX, see
         # https://pexpect.readthedocs.io/en/stable/overview.html#find-the-end-of-line-cr-lf-conventions
         # we also remove \r\n at start and end of each command with the slicing [2:-2]
-        output = self.child.match.groups()[0][2:-2].replace('\r\n', '\n')
-
+        output = self._clean_output(self.child.match.groups()[0])
+        # output = self.child.match.groups()[0][2:-2].replace('\r\n', '\n')
         if 'ERROR: ' in output:
             output += self.child.readline().replace('\r\n', '\n')
 
         return output
+
+    @staticmethod
+    def _clean_output(output: str) -> str:
+        """
+        Cleans the output which is obscured by various \r\n
+
+        :param output:
+        :return:
+        """
+        if output.startswith('\r\n'):
+            output = output[2:]
+        if output.endswith('\r\n'):
+            output = output[:-2]
+        return output.replace('\r\n', '\n')
+
+    @property
+    def before_output(self) -> str:
+        """
+        Returns the output that has been yielded before the matching regex.
+        This returns output that has been called async before, like ``s.boot;`` does.
+        :return:
+        """
+        return self._clean_output(self.child.before)
