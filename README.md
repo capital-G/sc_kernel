@@ -81,7 +81,7 @@ To display the documentation of a Class, simply prepend a `?` to it and execute 
 ?SinOsc
 ```
 
-## Installation / Development
+## Development
 
 * Clone the repository into a directory
 
@@ -98,6 +98,10 @@ To display the documentation of a Class, simply prepend a `?` to it and execute 
 
   and run `jupyter lab` from within the cloned directory as
   we need to have access to `sc_kernel`.
+
+* Run `./run_tests.sh` and make a PR :)
+  The tests often run into a pexpect timeout for some reason.
+  They should pass if they are run alone.
 
 ## Maintainers
 
