@@ -97,6 +97,11 @@ class SCKernel(ProcessMetaKernel):
         :param message:
         :return:
         """
+        # we also want to check the output that has been echoed before the matching of the regex
+        # because the SClang recorder works prepares async and we will not capture its output
+        # without preparing the record otherwise, check the docs
+        # https://doc.sccode.org/Classes/Recorder.html
+        message = message + self._sclang.before_output
         recording_paths: List[str] = self._sclang.RECORD_MATCHER_REGEX.findall(message)
         self.recording_paths.update(recording_paths)
         for recording_path in recording_paths:
@@ -213,9 +218,32 @@ class ScREPLWrapper(REPLWrapper):
         # although \r\n is DOS style it is for some reason used by UNIX, see
         # https://pexpect.readthedocs.io/en/stable/overview.html#find-the-end-of-line-cr-lf-conventions
         # we also remove \r\n at start and end of each command with the slicing [2:-2]
-        output = self.child.match.groups()[0][2:-2].replace('\r\n', '\n')
-
+        output = self._clean_output(self.child.match.groups()[0])
+        # output = self.child.match.groups()[0][2:-2].replace('\r\n', '\n')
         if 'ERROR: ' in output:
             output += self.child.readline().replace('\r\n', '\n')
 
         return output
+
+    @staticmethod
+    def _clean_output(output: str) -> str:
+        """
+        Cleans the output which is obscured by various \r\n
+
+        :param output:
+        :return:
+        """
+        if output.startswith('\r\n'):
+            output = output[2:]
+        if output.endswith('\r\n'):
+            output = output[:-2]
+        return output.replace('\r\n', '\n')
+
+    @property
+    def before_output(self) -> str:
+        """
+        Returns the output that has been yielded before the matching regex.
+        This returns output that has been called async before, like ``s.boot;`` does.
+        :return:
+        """
+        return self._clean_output(self.child.before)
