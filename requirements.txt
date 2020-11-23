@@ -1,4 +1,0 @@
-ipykernel
-pygments>=2.1
-metakernel
-pexpect

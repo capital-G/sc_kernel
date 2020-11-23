@@ -45,12 +45,21 @@ if __name__ == "__main__":
               "metakernel (>0.23.0)",
               "jupyter_client (>=4.4.0)",
               "ipython (>=4.0.0)",
-              "pygments (>=2.1)"
+              "pygments (>=2.1)",
+              "pexpect"
           ],
           install_requires=[
               "metakernel>=0.23.0",
               "jupyter_client >=4.4.0",
               "ipython>=4.0.0",
               "pygments>=2.1",
-          ]
+          ],
+          extras_require={
+              'dev': [
+                  'coverage==5.2.1',
+                  'flake8==3.8.3',
+                  'unittest-xml-reporting==3.0.4',
+                  'mypy==0.770',
+              ]
+          }
           )
