@@ -4,8 +4,8 @@ from setuptools.command.install import install
 
 with open('sc_kernel/__init__.py', 'rb') as fid:
     for line in fid:
-        line = line.decode('utf-8')
-        if line.startswith('__version__'):
+        line = line.decode('utf-8')  # type: ignore
+        if line.startswith('__version__'):  # type: ignore
             version = line.strip().split()[-1][1:-1]
             break
 
@@ -45,12 +45,21 @@ if __name__ == "__main__":
               "metakernel (>0.23.0)",
               "jupyter_client (>=4.4.0)",
               "ipython (>=4.0.0)",
-              "pygments (>=2.1)"
+              "pygments (>=2.1)",
+              "pexpect"
           ],
           install_requires=[
               "metakernel>=0.23.0",
               "jupyter_client >=4.4.0",
               "ipython>=4.0.0",
               "pygments>=2.1",
-          ]
+          ],
+          extras_require={
+              'dev': [
+                  'coverage==5.2.1',
+                  'flake8==3.8.3',
+                  'unittest-xml-reporting==3.0.4',
+                  'mypy==0.770',
+              ]
+          }
           )
