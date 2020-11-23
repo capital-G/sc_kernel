@@ -1,6 +1,6 @@
 # Supercollider Jupyter Kernel
 
-This kernel allows running SuperCollider Code in a [Jupyter](https://jupyter.org/) environment.
+This kernel allows running [SuperCollider](https://supercollider.github.io/) Code in a [Jupyter](https://jupyter.org/) environment.
 
 ![Demo Notebook](demo.jpg)
 
