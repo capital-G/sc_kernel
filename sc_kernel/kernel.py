@@ -156,9 +156,9 @@ class SCKernel(ProcessMetaKernel):
             return [c for c in self._sc_classes if c.startswith(code)]
         if code.count('.') == 1:
             # @todo too hacky :/
-            sc_class, sc_method = self.METHOD_EXTRACTOR_REGEX.findall(code)[0]
-            output = self._sclang.run_command(f'{sc_class}.dumpAllMethods;', timeout=10)
-            return [f'{sc_class}.{m}' for m in self.METHOD_DUMP_REGEX.findall(output) if m.startswith(sc_method)]
+            for sc_class, sc_method in self.METHOD_EXTRACTOR_REGEX.findall(code):
+                output = self._sclang.run_command(f'{sc_class}.dumpAllMethods;', timeout=10)
+                return [f'{sc_class}.{m}' for m in self.METHOD_DUMP_REGEX.findall(output) if m.startswith(sc_method)]
 
     def get_kernel_help_on(self, info, level=0, none_on_fail=False):
         code = info['obj'].split('.')[0]
