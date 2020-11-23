@@ -11,7 +11,8 @@ This kernel allows running [SuperCollider](https://supercollider.github.io/) Cod
 * To install the kernel execute
 
   ```shell
-  pip install git+https://github.com/capital-G/sc_kernel.git
+  pip3 install jupyterlab
+  pip3 install git+https://github.com/capital-G/sc_kernel.git
   ```
   
   If you have not installed SuperCollider in the default location you have to set a environment variable
