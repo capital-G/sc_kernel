@@ -72,12 +72,12 @@ class SCKernel(ProcessMetaKernel):
                 sclang_path = '/Applications/SuperCollider.app/Contents/MacOS/sclang'
             if p == 'Windows':
                 raise NotImplementedError
-        return sclang_path
+        return sclang_path  # type: ignore
 
     @property
     def _sclang(self) -> 'ScREPLWrapper':
         if self.__sclang:
-            return self.__sclang
+            return self.__sclang  # type: ignore
         self.__sclang = ScREPLWrapper(f'{self._sclang_path} -i jupyter')
         return self.__sclang
 
@@ -147,7 +147,7 @@ class SCKernel(ProcessMetaKernel):
         if self.__sc_classes:
             return self.__sc_classes
         self.__sc_classes = self._sclang.run_command('Class.allClasses.do({|c| c.postln; nil;})\n').split('\n')[:-1]
-        return self.__sc_classes
+        return self.__sc_classes  # type: ignore
 
     def get_completions(self, info):
         code: str = info['obj']  # returns everything in the line before the cursor
