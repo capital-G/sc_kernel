@@ -11,6 +11,9 @@ class SCKernelTestCase(TestCase):
         self.sc_output = StringIO()
         self.sc_kernel.Write = self._stream_writer
 
+    def tearDown(self):
+        self.sc_kernel.do_shutdown(restart=False)
+
     def test_language_version(self):
         self.assertTrue(str(self.sc_kernel.language_version).startswith('3'))
 
@@ -60,11 +63,13 @@ class ScREPLWrapperTestCase(TestCase):
         repl = ScREPLWrapper(self.sclang_path)
         output = repl.run_command('"Hello World".postln;')
         self.assertEqual(output, 'Hello World\n-> Hello World')
+        repl.terminate()
 
     def test_error(self):
         repl = ScREPLWrapper(self.sclang_path)
         output = repl.run_command('0/nil;')
         self.assertTrue('ERROR: ' in output)
+        repl.terminate()
 
     def test_capture_async_output(self):
         repl = ScREPLWrapper(self.sclang_path)
@@ -73,3 +78,4 @@ class ScREPLWrapperTestCase(TestCase):
         time.sleep(0.15)
         repl.run_command('2;')
         self.assertEqual(repl.before_output, 'foo')
+        repl.terminate()
