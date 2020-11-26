@@ -3,6 +3,7 @@ python:
   - "3.6"
   - "3.7"
   - "3.8"
+before_install:
+  - sudo apt-get -y supercollider
 script:
-  #  - ./install_headless_sc.sh
   - ./run_tests.sh
