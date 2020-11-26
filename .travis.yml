@@ -4,6 +4,6 @@ python:
   - "3.7"
   - "3.8"
 before_install:
-  - sudo apt-get -y supercollider
+  - sudo apt-get -y install supercollider
 script:
   - ./run_tests.sh
