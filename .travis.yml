@@ -6,4 +6,4 @@ python:
 before_install:
   - sudo apt-get -y install supercollider
 script:
-  - ./run_tests.sh
+  - xvfb-run --server-args="-screen 0 1024x768x24" ./run_tests.sh
