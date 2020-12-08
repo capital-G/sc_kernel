@@ -47,7 +47,7 @@ so one can later share the notebook with the sound examples embedded.
 Assuming one has started the server, simply execute
 
 ```supercollider
-%% recording "my_file.flac"
+%% record "my_file.flac"
 
 {SinOsc.ar(SinOsc.ar(200)*200)*0.2!2}.play;
 ```
