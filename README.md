@@ -6,25 +6,29 @@ This kernel allows running [SuperCollider](https://supercollider.github.io/) Cod
 
 ## Installation
 
-* [Install JupyterLab](https://jupyter.org/install) and [SuperCollider](https://supercollider.github.io/).
+Please make sure one has installed [SuperCollider](https://supercollider.github.io/) and
+[Python 3 with pip](https://realpython.com/installing-python).
 
-* To install the kernel execute
+* To install the kernel for Jupyter execute
 
   ```shell
-  pip3 install jupyterlab
-  pip3 install git+https://github.com/capital-G/sc_kernel.git
+  pip3 install sc-kernel
   ```
   
-  If you have not installed SuperCollider in the default location you have to set a environment variable
-  called `SCLANG_PATH` which points to the sclang executable.
+  This will also install [Jupyter Lab](https://jupyter.org/) if it is not already installed on the system.
 
 * Start a new Jupyter Lab instance by executing `jupyter lab` in a console.
 
-* To uninstall the kernel execute
+* Click on the SuperCollider icon
 
-  ```shell
-  jupyter kernelspec uninstall sc_kernel
-  ```
+If one has not installed SuperCollider in the default location, one has to set a environment variable
+called `SCLANG_PATH` which points to the sclang executable.
+
+To uninstall the kernel execute
+
+```shell
+jupyter kernelspec uninstall sc_kernel
+```
 
 ## Usage
 
@@ -84,12 +88,10 @@ To display the documentation of a Class, simply prepend a `?` to it and execute 
 
 ## Development
 
-* Clone the repository into a directory
+Any PR is welcome! Please state the changes in an Issue.
+To contribute, please
 
-  ```shell
-  git clone git@github.com:capital-G/sc_kernel.git
-  cd sc_kernel
-  ```
+* Fork the repository and clone it to a local directory
 
 * If one wants to add the kernel to an existing Jupyter installation one can execute
 

@@ -32,27 +32,21 @@ if __name__ == "__main__":
           url="https://github.com/capital-G/sc_kernel",
           license="BSD",
           long_description=open("README.md").read(),
-          long_description_content_type='text/md',
+          long_description_content_type='text/markdown',
           classifiers=["Framework :: IPython",
                        "License :: OSI Approved :: BSD License",
+                       "Programming Language :: Python :: 3.6",
                        "Programming Language :: Python :: 3.7",
                        "Programming Language :: Python :: 3.8",
                        "Topic :: System :: Shells"],
           packages=find_packages(include=["sc_kernel", "sc_kernel.*"]),
           include_package_data=True,
           data_files=DATA_FILES,
-          requires=[
-              "metakernel (>0.23.0)",
-              "jupyter_client (>=4.4.0)",
-              "ipython (>=4.0.0)",
-              "pygments (>=2.1)",
-              "pexpect"
-          ],
           install_requires=[
               "metakernel>=0.23.0",
-              "jupyter_client >=4.4.0",
-              "ipython>=4.0.0",
+              "ipython>=4.0",
               "pygments>=2.1",
+              "jupyterlab>= 2.0"
           ],
           extras_require={
               'dev': [
@@ -61,5 +55,6 @@ if __name__ == "__main__":
                   'unittest-xml-reporting==3.0.4',
                   'mypy==0.770',
               ]
-          }
+          },
+          python_requires='>=3.6',
           )
