@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# running sclang headless
+# https://github.com/supercollider/supercollider/blob/develop/README_RASPBERRY_PI.md#running-a-gui-build-headless
+export DISPLAY=:0.0
+
 # https://stackoverflow.com/questions/3349105/how-to-set-current-working-directory-to-the-directory-of-the-script-in-bash
 # set working dir to the dir of the script so relative paths work
 cd "$(dirname "$0")"
