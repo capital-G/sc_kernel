@@ -14,7 +14,7 @@ Please make sure one has installed [SuperCollider](https://supercollider.github.
   ```shell
   pip3 install sc-kernel
   ```
-  
+
   This will also install [Jupyter Lab](https://jupyter.org/) if it is not already installed on the system.
 
 * Start a new Jupyter Lab instance by executing `jupyter lab` in a console.
@@ -35,16 +35,16 @@ jupyter kernelspec uninstall sc_kernel
 ### Stop sound
 
 Currently the `Cmd + .` command is not binded. Instead create a new cell with a single dot
-  
-```
+
+```supercollider
 .
 ```
 
 and execute this cell. This will transform the command to `CommandPeriod.run;` which is what is actually called on the `Cmd + .` press in the IDE.
 
- 
+
  ### Recording
- 
+
 `sc_kernel` provides an easy way to record audio to the local directory and store it in the notebook
 so one can later share the notebook with the sound examples embedded.
 
@@ -93,6 +93,13 @@ To contribute, please
 
 * Fork the repository and clone it to a local directory
 
+* Create a virtual environment and install the dev dependencies
+  in it with
+
+  ```shell
+  pip3 install -e ".[dev]"
+  ```
+
 * If one wants to add the kernel to an existing Jupyter installation one can execute
 
   ```shell
@@ -103,7 +110,7 @@ To contribute, please
   we need to have access to `sc_kernel`.
 
 * Run `./run_tests.sh` and make a PR :)
-  The tests often run into a pexpect timeout for some reason.
+  The tests often run into a expect timeout for some reason.
   They should pass if they are run alone.
 
 ## Maintainers
