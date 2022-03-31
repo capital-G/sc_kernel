@@ -54,6 +54,7 @@ if __name__ == "__main__":
                   'flake8==3.8.3',
                   'unittest-xml-reporting==3.0.4',
                   'mypy==0.770',
+                  'pre-commit==2.17.0'
               ]
           },
           python_requires='>=3.6',
