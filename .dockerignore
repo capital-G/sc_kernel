@@ -1,0 +1,6 @@
+.git/
+.github/
+.mypy_cache/
+build/
+sc_kernel.egg-info/
+venv/

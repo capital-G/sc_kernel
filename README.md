@@ -30,6 +30,18 @@ To uninstall the kernel execute
 jupyter kernelspec uninstall sc_kernel
 ```
 
+### As a Docker container
+
+It is also possible to run sc-kernel in a Docker container, although a sound output is not possible in this case.
+Assuming you have cloned the repository and opened a terminal in its directory.
+
+```shell
+# build container - takes some time b/c we build supercollider
+docker build -t sc_kernel .
+# run container
+docker run -p 8888:8888 sc_kernel
+```
+
 ## Usage
 
 ### Stop sound
