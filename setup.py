@@ -46,7 +46,7 @@ if __name__ == "__main__":
               "metakernel>=0.23.0",
               "ipython>=4.0",
               "pygments>=2.1",
-              "jupyterlab>= 2.0"
+              "jupyterlab>=2.0"
           ],
           extras_require={
               'dev': [
