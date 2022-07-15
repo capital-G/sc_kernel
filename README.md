@@ -98,7 +98,7 @@ After the plotting is finished by the server we can now simply save an image of 
 to a file and also embed the image into the document via the *magic* command
 
 ```supercollider
-%% plot "my_plot" w
+%% plot "my_plot.png" w
 ```
 
 ![Plotting magic](plotting.png)
