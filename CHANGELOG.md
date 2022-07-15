@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.3
+
+* Add plot support
+* Allow numbers in recording file paths
+
 ## 0.3.2
 
 * Init test suite
