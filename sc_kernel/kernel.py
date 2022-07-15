@@ -43,7 +43,7 @@ class SCKernel(ProcessMetaKernel):
     SCHELP_HELP_FILE_PATH_REGEX = re.compile(r"<a href='file:\/\/(.*\.schelp)'>")
     SC_VERSION_REGEX = re.compile(r'sclang (\d+(\.\d+)+)')
     METHOD_EXTRACTOR_REGEX = re.compile(r'([A-Z]\w*)\.(.*)')
-    RECORD_MAGIC_REGEX = re.compile(r'%%\s?record \"?([A-z \.]*)\"?')
+    RECORD_MAGIC_REGEX = re.compile(r'%%\s?record \"?([\w \.]*)\"?')
 
     @property
     def language_version(self):
