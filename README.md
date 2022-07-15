@@ -54,8 +54,7 @@ Currently the `Cmd + .` command is not binded. Instead create a new cell with a 
 
 and execute this cell. This will transform the command to `CommandPeriod.run;` which is what is actually called on the `Cmd + .` press in the IDE.
 
-
- ### Recording
+### Recording
 
 `sc_kernel` provides an easy way to record audio to the local directory and store it in the notebook
 so one can later share the notebook with the sound examples embedded.
@@ -85,6 +84,39 @@ If an absolute path is given the output will be directed to the absolute path.
 
 Keep in mind that **good browser support only exists for FLAC** and with WAV the seeking does not work.
 The standard recording format of supercollider AIFF is not supported by browsers.
+
+### Plotting
+
+`sc_kernel` also provides a way to embed images of SuperCollider windows into the Jupyter document.
+First create a window that you want to embed into the document
+
+```supercollider
+w = {SinOsc.ar(2.0)}.plot(1.0);
+```
+
+After the plotting is finished by the server we can now simply save an image of the window
+to a file and also embed the image into the document via the *magic* command
+
+```supercollider
+%% plot "my_plot" w
+```
+
+![Plotting magic](plotting.png)
+
+The image will be saved relative the directory where `jupyter lab` was executed.
+
+> Note that `{}.plot` does not return a `Window` but a `Plotter`, but `sc_kernel`
+> accesses the window of a `Plotter` automatically.
+>
+> For plotting e.g. the server meter you need to pass the proper window, so
+>
+> ```supercollider
+> a = s.meter;
+> // a is a ServerMeter
+>
+> // new cell
+> %% plot "meter.png" a.window
+> ```
 
 ### Autocomplete
 
