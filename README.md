@@ -154,8 +154,7 @@ To contribute, please
   we need to have access to `sc_kernel`.
 
 * Run `./run_tests.sh` and make a PR :)
-  The tests often run into a expect timeout for some reason.
-  They should pass if they are run alone.
+  Use `black sc_kernel test` to format the source code.
 
 ## Maintainers
 

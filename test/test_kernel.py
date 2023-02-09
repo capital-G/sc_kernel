@@ -15,10 +15,10 @@ class SCKernelTestCase(TestCase):
         self.sc_kernel.do_shutdown(restart=False)
 
     def test_language_version(self):
-        self.assertTrue(str(self.sc_kernel.language_version).startswith('3'))
+        self.assertTrue(str(self.sc_kernel.language_version).startswith("3"))
 
     def test_banner(self):
-        self.assertTrue(self.sc_kernel.banner.startswith('sclang 3.'))
+        self.assertTrue(self.sc_kernel.banner.startswith("sclang 3."))
 
     def _stream_writer(self, message):
         self.sc_output.write(message)
@@ -26,46 +26,62 @@ class SCKernelTestCase(TestCase):
 
     def test_do_execute_direct(self):
         self.sc_kernel.do_execute_direct('"foo".postln;')
-        self.assertEqual(self.sc_output.read(), 'foo\n-> foo')
+        self.assertEqual(self.sc_output.read(), "foo\n-> foo")
 
     def test_mute(self):
-        self.sc_kernel.do_execute_direct('.')
-        self.assertEqual(self.sc_output.read(), '-> CmdPeriod')
+        self.sc_kernel.do_execute_direct(".")
+        self.assertEqual(self.sc_output.read(), "-> CmdPeriod")
 
     def test_recorder_magic(self):
         self.sc_kernel.do_execute_direct('%% record "foo.flac"')
-        self.assertEqual(self.sc_output.read(), "server 'localhost' not running\n-> localhost")
+        self.assertEqual(
+            self.sc_output.read(), "server 'localhost' not running\n-> localhost"
+        )
 
     # def test_sc_classes(self):
     #     self.assertTrue('Array' in self.sc_kernel._sc_classes)
     #     # test caching coverage
     #     self.assertTrue('Array' in self.sc_kernel._sc_classes)
 
-    # def test_get_completions(self):
-    #     # test class completion
-    #     self.assertTrue('Array' in self.sc_kernel.get_completions({'obj': "Arr"}))
-    #     # test method completion
-    #     c = self.sc_kernel.get_completions({'obj': 'SinOsc.a'})
-    #     self.assertTrue('SinOsc.asSymbol' in c)
+    def test_get_completions(self):
+        # test class completion
+        self.assertTrue("SinOscFB" in self.sc_kernel.get_completions({"obj": "SinO"}))
 
-    # def test_get_kernel_help_on(self):
-    #     h = self.sc_kernel.get_kernel_help_on({'obj': 'SinOsc.ar'})
-    #     self.assertTrue('Did not find any help' not in h)
-    #     h = self.sc_kernel.get_kernel_help_on({'obj': 'Aasfasd'})
-    #     self.assertTrue('Did not find any help' in h)
+        # test too short
+        self.assertTrue(len(self.sc_kernel.get_completions({"obj": "Si"})) == 0)
+        # test method completion
+        # c = self.sc_kernel.get_completions({'obj': 'SinOsc.a'})
+        # self.assertTrue('SinOsc.asSymbol' in c)
+
+    def test_get_kernel_help_on(self):
+        h = self.sc_kernel.get_kernel_help_on({"obj": "SinOsc.ar"})
+        self.assertTrue("Generates a sine wave" in h)
+        h = self.sc_kernel.get_kernel_help_on({"obj": "Aasfasd"})
+        self.assertTrue("Did not find any help" in h)
+
+    def test_extract_class_name(self):
+        test_cases = [
+            ["SinOsc", "SinOsc"],
+            ["S", "S"],
+            ["SinOsc.kr", "SinOsc"],
+            ["EnvGen(Env.adsr", "Env"],
+        ]
+        for test_case in test_cases:
+            test_input, test_should = test_case
+            self.assertEqual(self.sc_kernel.extract_class_name(test_input), test_should)
 
 
 class ScREPLWrapperTestCase(TestCase):
     def setUp(self):
         # slow down?
         time.sleep(0.1)
-        self.sclang_path = f'{SCKernel._get_sclang_path()} -i jupyter'
+        self.sclang_path = f"{SCKernel._get_sclang_path()} -i jupyter"
 
     def test_hello_world(self):
         try:
             repl = ScREPLWrapper(self.sclang_path)
             output = repl.run_command('"Hello World".postln;')
-            self.assertEqual(output, 'Hello World\n-> Hello World')
+            self.assertEqual(output, "Hello World\n-> Hello World")
         finally:
             repl.terminate()
 
@@ -74,7 +90,7 @@ class ScREPLWrapperTestCase(TestCase):
             repl = ScREPLWrapper(self.sclang_path)
             output = repl.run_command("foo+2;")
             # print red
-            self.assertTrue('\033[91m' in output)
+            self.assertTrue("\033[91m" in output)
             self.assertTrue("Variable 'foo' not defined." in output)
             # stop printing in style
             self.assertTrue("\x1b[0m" in output)
@@ -84,8 +100,8 @@ class ScREPLWrapperTestCase(TestCase):
     def test_invalid_command(self):
         try:
             repl = ScREPLWrapper(self.sclang_path)
-            output = repl.run_command('0/nil;')
-            self.assertTrue('ERROR a BinaryOpFailureError' in output)
+            output = repl.run_command("0/nil;")
+            self.assertTrue("ERROR a BinaryOpFailureError" in output)
         finally:
             repl.terminate()
 
@@ -93,10 +109,10 @@ class ScREPLWrapperTestCase(TestCase):
         try:
             repl = ScREPLWrapper(self.sclang_path)
             output = repl.run_command('fork({0.1.wait; "foo".postln;});')
-            self.assertEqual(output, '-> a Routine')
+            self.assertEqual(output, "-> a Routine")
             time.sleep(0.15)
-            repl.run_command('2;')
-            self.assertEqual(repl.before_output, 'foo')
+            repl.run_command("2;")
+            self.assertEqual(repl.before_output, "foo")
         finally:
             repl.terminate()
 
@@ -104,6 +120,6 @@ class ScREPLWrapperTestCase(TestCase):
         try:
             repl = ScREPLWrapper(self.sclang_path)
             output = repl.run_command('"foo".throw;')
-            self.assertEqual(output, '-> foo')
+            self.assertEqual(output, "-> foo")
         finally:
             repl.terminate()

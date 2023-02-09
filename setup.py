@@ -45,7 +45,7 @@ if __name__ == "__main__":
           install_requires=[
               "metakernel>=0.23.0",
               "ipython>=4.0",
-              "pygments>=2.1",
+              "pygments<=2.14.0",
               "jupyterlab>=2.0"
           ],
           extras_require={
@@ -54,7 +54,8 @@ if __name__ == "__main__":
                   'flake8<=6.0.0',
                   'unittest-xml-reporting==3.0.4',
                   'mypy<=1.0.0',
-                  'pre-commit==2.17.0'
+                  'pre-commit==2.17.0',
+                  'black<=23.1.0'
               ]
           },
           python_requires='>=3.6',
