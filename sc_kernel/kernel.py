@@ -15,6 +15,12 @@ from metakernel import ProcessMetaKernel, REPLWrapper
 from . import __version__
 
 
+class BgColors:
+    # from https://stackoverflow.com/a/287944/3475778
+    FAIL = '\033[91m'
+    END = '\x1b[0m'
+
+
 def get_kernel_json():
     """Get the kernel json for the kernel.
     """
@@ -227,7 +233,8 @@ class ScREPLWrapper(REPLWrapper):
 
     BEGIN_TOKEN = "**** JUPYTER ****"
     END_TOKEN = "**** /JUPYTER ****"
-    COMMAND_REGEX = re.compile(r'\*{4} JUPYTER \*{4}(.*)\*{4} /JUPYTER \*{4}', re.DOTALL)
+    COMMAND_REGEX = re.compile(r'\*{4} JUPYTER \*{4}(?P<Content>.*)\*{4} /JUPYTER \*{4}', re.DOTALL)
+    ERROR_REGEX = re.compile(r'(\*{4} JUPYTER \*{4})?(?P<Content>.*ERROR: .*\-{35})', re.DOTALL)
     RECORD_MATCHER_REGEX = re.compile(r"Recording channels \[[\d ,]*\] \.\.\. \npath: \'(.*)'", re.MULTILINE)
     RECORDING_STOPPED_REGEX = re.compile(r'Recording Stopped: \((.*)\)')
 
@@ -255,15 +262,17 @@ class ScREPLWrapper(REPLWrapper):
         # we can not use \n as we can have multiple lines in our command
         self.child.sendline(f'{exec_command}{chr(0x1b)}')
 
-        self.child.expect(self.COMMAND_REGEX, timeout=timeout)
+        self.child.expect([self.COMMAND_REGEX, self.ERROR_REGEX], timeout=timeout)
 
         # although \r\n is DOS style it is for some reason used by UNIX, see
         # https://pexpect.readthedocs.io/en/stable/overview.html#find-the-end-of-line-cr-lf-conventions
         # we also remove \r\n at start and end of each command with the slicing [2:-2]
-        output = self._clean_output(self.child.match.groups()[0])
+        output = self._clean_output(self.child.match.groupdict().get("Content", "ERROR"))
         # output = self.child.match.groups()[0][2:-2].replace('\r\n', '\n')
         if 'ERROR: ' in output:
             output += self.child.readline().replace('\r\n', '\n')
+            # add red color for fail
+            output = f"{BgColors.FAIL} {output} {BgColors.END}"
 
         return output
 

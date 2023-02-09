@@ -57,25 +57,45 @@ class SCKernelTestCase(TestCase):
 
 class ScREPLWrapperTestCase(TestCase):
     def setUp(self):
+        # slow down?
+        time.sleep(0.5)
         self.sclang_path = f'{SCKernel._get_sclang_path()} -i jupyter'
 
     def test_hello_world(self):
-        repl = ScREPLWrapper(self.sclang_path)
-        output = repl.run_command('"Hello World".postln;')
-        self.assertEqual(output, 'Hello World\n-> Hello World')
-        repl.terminate()
+        try:
+            repl = ScREPLWrapper(self.sclang_path)
+            output = repl.run_command('"Hello World".postln;')
+            self.assertEqual(output, 'Hello World\n-> Hello World')
+        finally:
+            repl.terminate()
+
+    def test_fail(self):
+        try:
+            repl = ScREPLWrapper(self.sclang_path)
+            output = repl.run_command("foo+2;")
+            # print red
+            self.assertTrue('\033[91m' in output)
+            self.assertTrue("Variable 'foo' not defined." in output)
+            # stop printing in style
+            self.assertTrue("\x1b[0m" in output)
+        finally:
+            repl.terminate
 
     def test_error(self):
-        repl = ScREPLWrapper(self.sclang_path)
-        output = repl.run_command('0/nil;')
-        self.assertTrue('ERROR: ' in output)
-        repl.terminate()
+        try:
+            repl = ScREPLWrapper(self.sclang_path)
+            output = repl.run_command('0/nil;')
+            self.assertTrue('ERROR: ' in output)
+        finally:
+            repl.terminate()
 
     def test_capture_async_output(self):
-        repl = ScREPLWrapper(self.sclang_path)
-        output = repl.run_command('fork({0.1.wait; "foo".postln;});')
-        self.assertEqual(output, '-> a Routine')
-        time.sleep(0.15)
-        repl.run_command('2;')
-        self.assertEqual(repl.before_output, 'foo')
-        repl.terminate()
+        try:
+            repl = ScREPLWrapper(self.sclang_path)
+            output = repl.run_command('fork({0.1.wait; "foo".postln;});')
+            self.assertEqual(output, '-> a Routine')
+            time.sleep(0.15)
+            repl.run_command('2;')
+            self.assertEqual(repl.before_output, 'foo')
+        finally:
+            repl.terminate()
