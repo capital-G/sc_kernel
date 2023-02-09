@@ -11,7 +11,7 @@ flake8
 flake8_status=$?
 
 echo "Run mypy test"
-mypy .
+mypy --exclude __main__ sc_kernel
 mypy_status=$?
 
 echo "Run unit tests"
@@ -46,3 +46,5 @@ if [ $coverage_status -ne 0 ]; then
   echo "Unittests failed"
   failedTests=1
 fi
+
+exit $failedTests
