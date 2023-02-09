@@ -18,8 +18,8 @@ RUN apt-get update && \
     cmake \
         -DBUILD_TESTING=OFF \
         -DENABLE_TESTSUITE=OFF \
-        -DINSTALL_HELP=OFF \
         -DNO_X11=OFF \
+        -SC_DOC_RENDER=ON \
         -DSC_ABLETON_LINK=OFF \
         -DSC_ED=OFF \
         -DSC_EL=no \
@@ -35,6 +35,10 @@ RUN apt-get update && \
     cd .. && \
     rm -rf SuperCollider && \
     rm -rf /var/lib/apt/lists/*
+
+# build docs
+RUN echo "SCDoc.renderAll;0.exit">renderDocs.scd && \
+    sclang renderDocs.scd
 
 RUN pip install --no-cache \
     metakernel>=0.23.0 \
