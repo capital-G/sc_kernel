@@ -48,4 +48,4 @@ RUN python setup.py install
 
 EXPOSE 8888
 
-ENTRYPOINT [ "jupyter", "lab", "--allow-root", "--ip=0.0.0.0", "--no-browser" ]
+CMD [ "jupyter", "lab", "--allow-root", "--ip=0.0.0.0", "--no-browser" ]

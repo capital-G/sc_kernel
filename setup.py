@@ -51,9 +51,9 @@ if __name__ == "__main__":
           extras_require={
               'dev': [
                   'coverage==5.2.1',
-                  'flake8==3.8.3',
+                  'flake8<=6.0.0',
                   'unittest-xml-reporting==3.0.4',
-                  'mypy==0.770',
+                  'mypy<=1.0.0',
                   'pre-commit==2.17.0'
               ]
           },

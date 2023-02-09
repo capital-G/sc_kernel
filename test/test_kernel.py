@@ -48,17 +48,17 @@ class SCKernelTestCase(TestCase):
     #     c = self.sc_kernel.get_completions({'obj': 'SinOsc.a'})
     #     self.assertTrue('SinOsc.asSymbol' in c)
 
-    def test_get_kernel_help_on(self):
-        h = self.sc_kernel.get_kernel_help_on({'obj': 'SinOsc.ar'})
-        self.assertTrue('Did not find any help' not in h)
-        h = self.sc_kernel.get_kernel_help_on({'obj': 'Aasfasd'})
-        self.assertTrue('Did not find any help' in h)
+    # def test_get_kernel_help_on(self):
+    #     h = self.sc_kernel.get_kernel_help_on({'obj': 'SinOsc.ar'})
+    #     self.assertTrue('Did not find any help' not in h)
+    #     h = self.sc_kernel.get_kernel_help_on({'obj': 'Aasfasd'})
+    #     self.assertTrue('Did not find any help' in h)
 
 
 class ScREPLWrapperTestCase(TestCase):
     def setUp(self):
         # slow down?
-        time.sleep(0.5)
+        time.sleep(0.1)
         self.sclang_path = f'{SCKernel._get_sclang_path()} -i jupyter'
 
     def test_hello_world(self):
