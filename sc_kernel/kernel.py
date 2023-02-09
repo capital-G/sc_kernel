@@ -252,7 +252,7 @@ class SCKernel(ProcessMetaKernel):
 
     def get_kernel_help_on(self, info: Dict, level=0, none_on_fail=False):
         code = self.extract_class_name(info["obj"])
-        output = self._sclang.run_command(f"{code}.helpFilePath;")
+        output = self._sclang.run_command(f'SCDoc.findHelpFile("{code}");')
         help_file_paths = self.HTML_HELP_FILE_PATH_REGEX.findall(output)
         if help_file_paths:
             if os.path.isfile(help_file_paths[0]):
