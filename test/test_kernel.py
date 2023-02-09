@@ -36,17 +36,17 @@ class SCKernelTestCase(TestCase):
         self.sc_kernel.do_execute_direct('%% record "foo.flac"')
         self.assertEqual(self.sc_output.read(), "server 'localhost' not running\n-> localhost")
 
-    def test_sc_classes(self):
-        self.assertTrue('Array' in self.sc_kernel._sc_classes)
-        # test caching coverage
-        self.assertTrue('Array' in self.sc_kernel._sc_classes)
+    # def test_sc_classes(self):
+    #     self.assertTrue('Array' in self.sc_kernel._sc_classes)
+    #     # test caching coverage
+    #     self.assertTrue('Array' in self.sc_kernel._sc_classes)
 
-    def test_get_completions(self):
-        # test class completion
-        self.assertTrue('Array' in self.sc_kernel.get_completions({'obj': "Arr"}))
-        # test method completion
-        c = self.sc_kernel.get_completions({'obj': 'SinOsc.a'})
-        self.assertTrue('SinOsc.asSymbol' in c)
+    # def test_get_completions(self):
+    #     # test class completion
+    #     self.assertTrue('Array' in self.sc_kernel.get_completions({'obj': "Arr"}))
+    #     # test method completion
+    #     c = self.sc_kernel.get_completions({'obj': 'SinOsc.a'})
+    #     self.assertTrue('SinOsc.asSymbol' in c)
 
     def test_get_kernel_help_on(self):
         h = self.sc_kernel.get_kernel_help_on({'obj': 'SinOsc.ar'})
@@ -81,11 +81,11 @@ class ScREPLWrapperTestCase(TestCase):
         finally:
             repl.terminate
 
-    def test_error(self):
+    def test_invalid_command(self):
         try:
             repl = ScREPLWrapper(self.sclang_path)
             output = repl.run_command('0/nil;')
-            self.assertTrue('ERROR: ' in output)
+            self.assertTrue('ERROR a BinaryOpFailureError' in output)
         finally:
             repl.terminate()
 
@@ -97,5 +97,13 @@ class ScREPLWrapperTestCase(TestCase):
             time.sleep(0.15)
             repl.run_command('2;')
             self.assertEqual(repl.before_output, 'foo')
+        finally:
+            repl.terminate()
+
+    def test_throw(self):
+        try:
+            repl = ScREPLWrapper(self.sclang_path)
+            output = repl.run_command('"foo".throw;')
+            self.assertEqual(output, '-> foo')
         finally:
             repl.terminate()

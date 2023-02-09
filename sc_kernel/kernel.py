@@ -1,6 +1,7 @@
 import json
 import platform
 import sys
+from functools import partial
 import time
 from subprocess import check_output
 import re
@@ -13,6 +14,20 @@ from IPython.display import Image
 from metakernel import ProcessMetaKernel, REPLWrapper
 
 from . import __version__
+
+# idea from
+# https://github.com/supercollider/qpm/blob/d3f72894e289744f01f3c098ab0a474d5190315e/qpm/sclang_process.py#L62
+
+EXEC_WRAPPER = partial("""
+var cwd = "{cwd}";
+{{
+    var result;
+    "**** JUPYTER ****".postln;
+    result = {{ try {{{code}}} {{|error| "ERROR %".format(error).postln}} }}.value();
+    postf("-> %%\n", result);
+    "**** /JUPYTER ****".postln;
+}}.fork(AppClock);
+""".format, cwd=os.getcwd())
 
 
 class BgColors:
@@ -235,6 +250,7 @@ class ScREPLWrapper(REPLWrapper):
     END_TOKEN = "**** /JUPYTER ****"
     COMMAND_REGEX = re.compile(r'\*{4} JUPYTER \*{4}(?P<Content>.*)\*{4} /JUPYTER \*{4}', re.DOTALL)
     ERROR_REGEX = re.compile(r'(\*{4} JUPYTER \*{4})?(?P<Content>.*ERROR: .*\-{35})', re.DOTALL)
+    THROW_REGEX = re.compile(r'(?P<Content>(ERROR: .*)?CALL STACK:)', re.DOTALL)
     RECORD_MATCHER_REGEX = re.compile(r"Recording channels \[[\d ,]*\] \.\.\. \npath: \'(.*)'", re.MULTILINE)
     RECORDING_STOPPED_REGEX = re.compile(r'Recording Stopped: \((.*)\)')
 
@@ -252,17 +268,11 @@ class ScREPLWrapper(REPLWrapper):
         :param kwargs:
         :return: output of command as a string
         """
-        # idea from
-        # https://github.com/supercollider/qpm/blob/d3f72894e289744f01f3c098ab0a474d5190315e/qpm/sclang_process.py#L62
-
-        exec_command = '{ var result; "%s".postln; result = {%s}.value(); postf("-> %%\n", result); "%s".postln;}.fork(AppClock);' % (  # noqa
-            self.BEGIN_TOKEN, command, self.END_TOKEN)  # noqa
-
         # 0x1b is the escape key which tells sclang to evaluate any command b/c
         # we can not use \n as we can have multiple lines in our command
-        self.child.sendline(f'{exec_command}{chr(0x1b)}')
+        self.child.sendline(f'{EXEC_WRAPPER(code=command)}{chr(0x1b)}')
 
-        self.child.expect([self.COMMAND_REGEX, self.ERROR_REGEX], timeout=timeout)
+        self.child.expect([self.COMMAND_REGEX, self.ERROR_REGEX, self.THROW_REGEX], timeout=timeout)
 
         # although \r\n is DOS style it is for some reason used by UNIX, see
         # https://pexpect.readthedocs.io/en/stable/overview.html#find-the-end-of-line-cr-lf-conventions
