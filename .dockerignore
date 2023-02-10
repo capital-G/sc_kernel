@@ -4,3 +4,7 @@
 build/
 sc_kernel.egg-info/
 venv/
+*.ipynb
+*.png
+.ipynb_checkpoints
+*.db

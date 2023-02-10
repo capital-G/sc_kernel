@@ -40,13 +40,9 @@ RUN apt-get update && \
 RUN echo "SCDoc.renderAll;0.exit">renderDocs.scd && \
     sclang renderDocs.scd
 
-RUN pip install --no-cache \
-    metakernel>=0.23.0 \
-    ipython>=4.0 \
-    pygments>=2.1 \
-    jupyterlab>=2.0
-
 ADD . .
+
+RUN pip install -e .
 
 RUN python setup.py install
 

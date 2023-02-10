@@ -39,7 +39,9 @@ Assuming you have cloned the repository and opened a terminal in its directory.
 # build container - takes some time b/c we build supercollider
 docker build -t sc_kernel .
 # run container
-docker run -p 8888:8888 sc_kernel
+# -v mounts the current directory to the container
+# -p passes the container port to our host
+docker run -v ${PWD}:/home/sc_kernel -p 8888:8888 sc_kernel
 ```
 
 ## Usage
@@ -132,7 +134,29 @@ To display the documentation of a Class, simply prepend a `?` to it and execute 
 ?SinOsc
 ```
 
-You can also hit `shift <tab>` to trigger the inline documentation.
+You can also hit `shift <tab>` iff the cursor is behind a class to trigger the inline documentation.
+
+
+![Inline documentation](inline_docs.png)
+
+### Real Time Collaboration
+
+Jupyter Lab allows for real time collaboration in which multiple users can write in the same document from different computers by visiting the Jupyter server via their browser.
+Each user can write and execute sclang statements on your local sclang interpreter and the cursors of each user is shown to everyone.
+
+This allows for interactive, shared sessions which can be an interesting live coding sessions.
+
+> Be aware that this can be a security threat as it allows for other people from within the network to execute arbitrary sclang commands on your computer
+
+To start such a session you can spin Jupyter Lab via
+
+```shell
+jupyter lab --ip 0.0.0.0 --collaborative --NotebookApp.token='sclang'
+```
+
+where the `NotebookApp.token` is the necessary password to login - set it to `''` if no password is wanted.
+
+Check out the [documentation on Jupyter Lab](https://jupyterlab.readthedocs.io/en/stable/user/rtc.html) about *Real Time Collaboration*.
 
 ## Development
 
