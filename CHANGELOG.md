@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0
+
+* Introduce real time collaboration
+* Make error fallback more resilient
+* Change magic functions for plotting and recording
+* Fix autocomplete and docs display
+* Add docker image
+* Run tests in CI
+* Bump dependencies
+
 ## 0.3.3
 
 * Add plot support
