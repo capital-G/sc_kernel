@@ -46,6 +46,12 @@ docker run -v ${PWD}:/home/sc_kernel -p 8888:8888 sc_kernel
 
 ## Usage
 
+Contrary to ScIDE each document will run in its own interpreter and not in a shared one.
+This is the default behavior of Jupyter but maybe this will be changed at a later point.
+
+Currently it is only possible to use the default config - if you encounter missing classes
+it is probably caused that they are not available in the default config.
+
 ### Stop sound
 
 Currently the `Cmd + .` command is not binded. Instead create a new cell with a single dot
