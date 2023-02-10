@@ -39,7 +39,9 @@ Assuming you have cloned the repository and opened a terminal in its directory.
 # build container - takes some time b/c we build supercollider
 docker build -t sc_kernel .
 # run container
-docker run -p 8888:8888 sc_kernel
+# -v mounts the current directory to the container
+# -p passes the container port to our host
+docker run -v ${PWD}:/home/sc_kernel -p 8888:8888 sc_kernel
 ```
 
 ## Usage
