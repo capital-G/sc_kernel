@@ -6,6 +6,7 @@ coverage
 coverage.xml
 junit-mypy.xml
 sc_*.png
+*.db
 
 # Created by .ignore support plugin (hsz.mobi)
 ### macOS template
