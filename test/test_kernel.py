@@ -32,16 +32,23 @@ class SCKernelTestCase(TestCase):
         self.sc_kernel.do_execute_direct(".")
         self.assertEqual(self.sc_output.read(), "-> CmdPeriod")
 
-    def test_recorder_magic(self):
-        self.sc_kernel.do_execute_direct('%% record "foo.flac"')
-        self.assertEqual(
-            self.sc_output.read(), "server 'localhost' not running\n-> localhost"
-        )
+    def test_recorder_regex(self):
+        some_text = """
+        --> "Hello World"
+        -----RECORDED_AUDIO_/home/sc.flac-----
+        """
+        parsed_text = self.sc_kernel._check_for_recordings(some_text)
+        self.assertTrue("-----RECORDED_AUDIO" not in parsed_text)
+        self.assertTrue("Error displaying /home/sc.flac" in parsed_text)
 
-    # def test_sc_classes(self):
-    #     self.assertTrue('Array' in self.sc_kernel._sc_classes)
-    #     # test caching coverage
-    #     self.assertTrue('Array' in self.sc_kernel._sc_classes)
+    def test_plot_regex(self):
+        some_text = """
+        --> "Hello World"
+        -----PLOTTED_IMAGE_/home/sc.png-----
+        """
+        parsed_text = self.sc_kernel._check_for_plot(some_text)
+        self.assertTrue("-----PLOTTED_IMAGE" not in parsed_text)
+        self.assertTrue("Error displaying /home/sc.png" in parsed_text)
 
     def test_get_completions(self):
         # test class completion

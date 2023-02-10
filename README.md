@@ -12,7 +12,7 @@ Please make sure one has installed [SuperCollider](https://supercollider.github.
 * To install the kernel for Jupyter execute
 
   ```shell
-  pip3 install sc-kernel
+  pip3 install --upgrade sc-kernel
   ```
 
   This will also install [Jupyter Lab](https://jupyter.org/) if it is not already installed on the system.
@@ -58,34 +58,29 @@ and execute this cell. This will transform the command to `CommandPeriod.run;` w
 
 ### Recording
 
-`sc_kernel` provides an easy way to record audio to the local directory and store it in the notebook
-so one can later share the notebook with the sound examples embedded.
+`sc_kernel` provides an easy way to record audio to the local directory and store it embedded in the notebook
+so one can transfer the notebook into a website which has the audio files included.
+
+The audio is stored in FLAC with 16 bit resolution.
+
+The provided function `record` takes 2 arguments:
+
+* Duration in seconds
+* Filename which will be used for the recording, using the path of the notebook as base path.
 
 Assuming one has started the server, simply execute
 
 ```supercollider
-%% record "my_file.flac"
+Ndef(\sine, {
+    var sig = SinOsc.ar(LFDNoise0.kr(1.0!2).exprange(100, 400));
+    sig = sig * \amp.kr(0.2);
+    sig;
+}).play;
 
-{SinOsc.ar(SinOsc.ar(200)*200)*0.2!2}.play;
+record.(4.0);
 ```
 
-to start the recording.
-
-To stop the recording, simply stop the Server recording via
-
-```supercollider
-s.stopRecording;
-```
-
-If one has chosen FLAC or WAV as file format, one will see a playback menu for the file within the notebook.
-
-![Recording magic](recording.png)
-
-If an relative path is provided as filename it will be put relative to the folder where `jupyter lab` was executed.
-If an absolute path is given the output will be directed to the absolute path.
-
-Keep in mind that **good browser support only exists for FLAC** and with WAV the seeking does not work.
-The standard recording format of supercollider AIFF is not supported by browsers.
+![Recording](recording.png)
 
 ### Plotting
 
@@ -135,7 +130,6 @@ To display the documentation of a Class, simply prepend a `?` to it and execute 
 ```
 
 You can also hit `shift <tab>` iff the cursor is behind a class to trigger the inline documentation.
-
 
 ![Inline documentation](inline_docs.png)
 
