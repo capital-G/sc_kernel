@@ -95,15 +95,16 @@ w = {SinOsc.ar(2.0)}.plot(1.0);
 ```
 
 After the plotting is finished by the server we can now simply save an image of the window
-to a file and also embed the image into the document via the *magic* command
+to a file and also embed the image into the document via a SuperCollider helper method which is available.
 
 ```supercollider
-%% plot "my_plot.png" w
+plot.(w);
 ```
 
 ![Plotting magic](plotting.png)
 
 The image will be saved relative the directory where `jupyter lab` was executed.
+The optional second argument can be the filename.
 
 > Note that `{}.plot` does not return a `Window` but a `Plotter`, but `sc_kernel`
 > accesses the window of a `Plotter` automatically.
@@ -115,12 +116,13 @@ The image will be saved relative the directory where `jupyter lab` was executed.
 > // a is a ServerMeter
 >
 > // new cell
-> %% plot "meter.png" a.window
+> plot.(a.window, "meter.png");
 > ```
 
 ### Autocomplete
 
 Simply push `Tab` to see available autocompletions.
+This is currently limited to scan for available classes.
 
 ### Documentation
 
@@ -129,6 +131,8 @@ To display the documentation of a Class, simply prepend a `?` to it and execute 
 ```supercollider
 ?SinOsc
 ```
+
+You can also hit `shift <tab>` to trigger the inline documentation.
 
 ## Development
 
