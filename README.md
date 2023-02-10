@@ -132,7 +132,10 @@ To display the documentation of a Class, simply prepend a `?` to it and execute 
 ?SinOsc
 ```
 
-You can also hit `shift <tab>` to trigger the inline documentation.
+You can also hit `shift <tab>` iff the cursor is behind a class to trigger the inline documentation.
+
+
+![Inline documentation](inline_docs.png)
 
 ## Development
 
