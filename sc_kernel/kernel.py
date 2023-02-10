@@ -2,10 +2,9 @@ import json
 import platform
 import sys
 from functools import partial
-import time
 from subprocess import check_output
 import re
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 import os
 
 import pexpect
@@ -19,26 +18,42 @@ from . import __version__
 # https://github.com/supercollider/qpm/blob/d3f72894e289744f01f3c098ab0a474d5190315e/qpm/sclang_process.py#L62
 
 PLOT_HELPER = """
-var plot = {{|w, fileName|
+var plot = {|w, fileName, waitTime|
     var image;
     var filePath;
-    1.0.wait;
-    fileName = fileName ? "sc_%.png".format({{rrand(0, 9)}}.dup(10).join(""));
+    (waitTime?1.0).wait;
+    fileName = fileName ? "sc_%.png".format({rrand(0, 9)}.dup(10).join(""));
     filePath = cwd +/+ fileName;
-    if(w.isKindOf(Plotter), {{
+    if(w.isKindOf(Plotter), {
         w = w.parent;
-    }});
-    if(w.isNil, {{"Can not create image of closed window".throw;}});
+    });
+    if(w.isNil, {"Can not create image of closed window".throw;});
     image = Image.fromWindow(w).write(filePath);
     "-----PLOTTED_IMAGE_%-----".format(filePath).postln;
     image;
-}};
-""".format()
+};
+"""
+
+RECORD_HELPER = """
+var record = {|duration, fileName|
+    var filePath;
+    var recorder;
+    fileName = fileName ? "sc_%.flac".format({rrand(0, 9)}.dup(10).join(""));
+    filePath = cwd +/+ fileName;
+    Server.default.recorder.recHeaderFormat = "flac";
+    Server.default.recorder.recSampleFormat = "int16";
+    recorder = Server.default.record(path: filePath, duration: duration);
+    (duration+1).wait;
+    "-----RECORDED_AUDIO_%-----".format(filePath).postln;
+    recorder;
+};
+"""
 
 EXEC_WRAPPER = partial(
     """
 var cwd = "{cwd}";
 {plot_helper}
+{record_helper}
 
 {{
     var result;
@@ -52,6 +67,7 @@ var cwd = "{cwd}";
 """.format,  # noqa
     cwd=os.getcwd(),
     plot_helper="" if os.environ.get("NO_QT") else PLOT_HELPER,
+    record_helper=RECORD_HELPER,
 )
 
 SEARCH_CLASSES = partial(
@@ -102,13 +118,11 @@ class SCKernel(ProcessMetaKernel):
     }
     kernel_json = get_kernel_json()
 
-    METHOD_DUMP_REGEX = re.compile(r"(\w*)\s*\(")
     HTML_HELP_FILE_PATH_REGEX = re.compile(r"-> file:\/\/(.*\.html)")
     SCHELP_HELP_FILE_PATH_REGEX = re.compile(r"<a href='file:\/\/(.*\.schelp)'>")
     SC_VERSION_REGEX = re.compile(r"sclang (\d+(\.\d+)+)")
-    METHOD_EXTRACTOR_REGEX = re.compile(r"([A-Z]\w*)\.(.*)")
-    RECORD_MAGIC_REGEX = re.compile(r"%%\s?record \"?([\w \.]*)\"?")
-    PLOT_REGEX = re.compile(r"-{5}PLOTTED_IMAGE_(?P<ImagePath>.*)-{5}")
+    PLOT_REGEX = re.compile(r"-{5}PLOTTED_IMAGE_(?P<ImagePath>[^%].*)-{5}")
+    RECORDING_REGEX = re.compile(r"-{5}RECORDED_AUDIO_(?P<AudioPath>[^%].*)-{5}")
 
     @property
     def language_version(self):
@@ -123,7 +137,6 @@ class SCKernel(ProcessMetaKernel):
         self._sclang_path = self._get_sclang_path()
         self.__sclang: Optional[REPLWrapper] = None
         self.wrapper = self._sclang
-        self.recording_paths = set()
 
     @staticmethod
     def _get_sclang_path() -> str:
@@ -148,75 +161,32 @@ class SCKernel(ProcessMetaKernel):
     def do_execute_direct(self, code: str, silent=False):
         if code == ".":
             code = "CmdPeriod.run;"
-        for file_recording in self.RECORD_MAGIC_REGEX.findall(code):
-            # check https://en.wikipedia.org/wiki/HTML5_audio#Supported_audio_coding_formats
-            # for available formats in a browser and
-            # http://doc.sccode.org/Classes/SoundFile.html#-headerFormat
-            # for available SC formats
-            _, file_ext = os.path.splitext(file_recording)
-            if file_ext.lower() not in [".flac", ".wav"]:
-                self.log.error("Only FLAC and WAV is supported for browser playback!")
-            file_path = os.path.join(os.getcwd(), file_recording)
-            self.log.info(f"Start recording to {file_path}")
-            recording_code = f"""
-            s.recorder.recHeaderFormat = "{file_ext[1:]}";
-            s.recorder.recSampleFormat = "int24";
-            s.record("{file_path}");
-            """
-            code = recording_code + code
-            # remove magic from code execution
-            code = self.RECORD_MAGIC_REGEX.sub("", code)
-
         return super().do_execute_direct(
             code=code,
             silent=silent,
         )
 
     def _check_for_recordings(self, message):
-        """
-        As Jupyter Notebook struggles with audio files that are still written to we can only display
-        audio files once they are fully written.
-        As SuperCollider is only displaying the file name at the end
-
-        :param message:
-        :return:
-        """
-        # we also want to check the output that has been echoed before the matching of the regex
-        # because the SClang recorder works prepares async and we will not capture its output
-        # without preparing the record otherwise, check the docs
-        # https://doc.sccode.org/Classes/Recorder.html
-        message = message + self._sclang.before_output
-        recording_paths: List[str] = self._sclang.RECORD_MATCHER_REGEX.findall(message)
-        self.recording_paths.update(recording_paths)
-        for recording_path in recording_paths:
-            self.log.info(f"Found new recording: {recording_path}")
-
-        finished_recordings: List[str] = self._sclang.RECORDING_STOPPED_REGEX.findall(
-            message
-        )
-
-        displayed_recordings: List[str] = []
-        for finished_recording in finished_recordings:
-            for recording_path in [
-                f for f in self.recording_paths if finished_recording in f
-            ]:
-                self.log.info(f"Found finished recording: {recording_path}")
-                time.sleep(1.0)  # wait for finished writing, just in case
-                self.Display(Audio(filename=recording_path))
-                displayed_recordings.append(recording_path)
-        self.recording_paths.difference_update(displayed_recordings)
+        audio_path: str
+        for audio_path in self.RECORDING_REGEX.findall(message):
+            try:
+                self.Display(Audio(audio_path))
+            except ValueError as e:
+                message += f"Error displaying {audio_path}: {e}\n"
+        return self.RECORDING_REGEX.sub("", message)
 
     def _check_for_plot(self, message: str) -> str:
         image_path: str
         for image_path in self.PLOT_REGEX.findall(message):
-            # in case the helper function gets printed
-            if image_path == "%":
-                continue
-            self.Display(Image(filename=image_path))
+            try:
+                self.Display(Image(filename=image_path))
+            except (ValueError, FileNotFoundError) as e:
+                message += f"Error displaying {image_path}: {e}\n"
+
         return self.PLOT_REGEX.sub("", message)
 
     def Write(self, message):
-        self._check_for_recordings(message)
+        message = self._check_for_recordings(message)
         message = self._check_for_plot(message)
         super().Write(message)
 
@@ -298,10 +268,6 @@ class ScREPLWrapper(REPLWrapper):
         r"(\*{4} JUPYTER \*{4})?(?P<Content>.*ERROR: .*\-{35})", re.DOTALL
     )
     THROW_REGEX = re.compile(r"(?P<Content>(ERROR: .*)?CALL STACK:)", re.DOTALL)
-    RECORD_MATCHER_REGEX = re.compile(
-        r"Recording channels \[[\d ,]*\] \.\.\. \npath: \'(.*)'", re.MULTILINE
-    )
-    RECORDING_STOPPED_REGEX = re.compile(r"Recording Stopped: \((.*)\)")
 
     def run_command(self, command, timeout=30, *args, **kwargs):
         """
@@ -319,7 +285,9 @@ class ScREPLWrapper(REPLWrapper):
         """
         # 0x1b is the escape key which tells sclang to evaluate any command b/c
         # we can not use \n as we can have multiple lines in our command
-        self.child.sendline(f"{EXEC_WRAPPER(code=command)}{chr(0x1b)}")
+        command = EXEC_WRAPPER(code=command)
+        # print(command)
+        self.child.sendline(f"{command}{chr(0x1b)}")
 
         self.child.expect(
             [self.COMMAND_REGEX, self.ERROR_REGEX, self.THROW_REGEX], timeout=timeout

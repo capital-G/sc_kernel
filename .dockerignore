@@ -8,3 +8,5 @@ venv/
 *.png
 .ipynb_checkpoints
 *.db
+*.wav
+*.flac
