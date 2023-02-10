@@ -18,23 +18,27 @@ from . import __version__
 # idea from
 # https://github.com/supercollider/qpm/blob/d3f72894e289744f01f3c098ab0a474d5190315e/qpm/sclang_process.py#L62
 
+PLOT_HELPER = """
+var plot = {{|w, fileName|
+    var image;
+    var filePath;
+    1.0.wait;
+    fileName = fileName ? "sc_%.png".format({{rrand(0, 9)}}.dup(10).join(""));
+    filePath = cwd +/+ fileName;
+    if(w.isKindOf(Plotter), {{
+        w = w.parent;
+    }});
+    if(w.isNil, {{"Can not create image of closed window".throw;}});
+    image = Image.fromWindow(w).write(filePath);
+    "-----PLOTTED_IMAGE_%-----".format(filePath).postln;
+    image;
+}};
+""".format()
+
 EXEC_WRAPPER = partial(
     """
 var cwd = "{cwd}";
-var plot = {{|w, fileName|
-	var image;
-	var filePath;
-	1.0.wait;
-	fileName = fileName ? "sc_%.png".format({{rrand(0, 9)}}.dup(10).join(""));
-	filePath = cwd +/+ fileName;
-	if(w.isKindOf(Plotter), {{
-		w = w.parent;
-	}});
-	if(w.isNil, {{"Can not create image of closed window".throw;}});
-	image = Image.fromWindow(w).write(filePath);
-	"-----PLOTTED_IMAGE_%-----".format(filePath).postln;
-	image;
-}};
+{plot_helper}
 
 {{
     var result;
@@ -45,21 +49,22 @@ var plot = {{|w, fileName|
 }}.fork(AppClock);
 """.format,  # noqa
     cwd=os.getcwd(),
+    plot_helper="" if os.environ.get("NO_QT") else PLOT_HELPER,
 )
 
 SEARCH_CLASSES = partial(
     """
 var getClasses = {{|t|
-	var res = [];
-	if(t.size>2, {{
-		Class.allClasses.do({{ |class|
-			var name = class.name.asString;
-			if (name.beginsWith(t)) {{
-				res = res.add(name);
-			}};
-		}});
-	}});
-	res.cs;
+    var res = [];
+    if(t.size>2, {{
+        Class.allClasses.do({{ |class|
+            var name = class.name.asString;
+            if (name.beginsWith(t)) {{
+                res = res.add(name);
+            }};
+        }});
+    }});
+    res.cs;
 }};
 getClasses.("{search_term}");
 """.format  # noqa
