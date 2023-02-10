@@ -123,3 +123,16 @@ class ScREPLWrapperTestCase(TestCase):
             self.assertEqual(output, "-> foo")
         finally:
             repl.terminate()
+
+    def test_comment(self):
+        try:
+            repl = ScREPLWrapper(self.sclang_path)
+            output = repl.run_command(
+                """
+            // foobar
+            2+2;
+            """
+            )
+            self.assertEqual(output, "-> 4")
+        finally:
+            repl.terminate()

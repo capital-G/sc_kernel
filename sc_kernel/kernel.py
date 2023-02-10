@@ -43,7 +43,9 @@ var cwd = "{cwd}";
 {{
     var result;
     "**** JUPYTER ****".postln;
-    result = {{ try {{{code}}} {{|error| "ERROR %".format(error).postln}} }}.value();
+    result = {{ try {{
+        {code}
+    }} {{|error| "ERROR %".format(error).postln}} }}.value();
     postf("-> %%\n", result);
     "**** /JUPYTER ****".postln;
 }}.fork(AppClock);
