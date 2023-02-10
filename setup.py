@@ -43,10 +43,11 @@ if __name__ == "__main__":
           include_package_data=True,
           data_files=DATA_FILES,
           install_requires=[
-              "metakernel>=0.23.0",
-              "ipython>=4.0",
-              "pygments<=2.14.0",
-              "jupyterlab>=2.0"
+              "metakernel>=0.23.0, <0.30",
+              "ipython>=4.0, <9.0",
+              "pygments<=2.14.0, >2.1",
+              "jupyterlab>=2.0, <4.0",
+              "jupyter_server<3.0, >2.0"
           ],
           extras_require={
               'dev': [
