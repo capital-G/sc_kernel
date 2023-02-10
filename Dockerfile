@@ -52,4 +52,8 @@ RUN python setup.py install
 
 EXPOSE 8888
 
+# we compile w/o qt - this makes plotting not possible
+# and therefore we need a flag to not load the function
+ENV NO_QT=true
+
 CMD [ "jupyter", "lab", "--allow-root", "--ip=0.0.0.0", "--no-browser" ]

@@ -5,7 +5,7 @@ from functools import partial
 import time
 from subprocess import check_output
 import re
-from typing import Dict, Optional, List, Set
+from typing import Dict, Optional, List
 import os
 
 import pexpect
@@ -18,9 +18,28 @@ from . import __version__
 # idea from
 # https://github.com/supercollider/qpm/blob/d3f72894e289744f01f3c098ab0a474d5190315e/qpm/sclang_process.py#L62
 
+PLOT_HELPER = """
+var plot = {{|w, fileName|
+    var image;
+    var filePath;
+    1.0.wait;
+    fileName = fileName ? "sc_%.png".format({{rrand(0, 9)}}.dup(10).join(""));
+    filePath = cwd +/+ fileName;
+    if(w.isKindOf(Plotter), {{
+        w = w.parent;
+    }});
+    if(w.isNil, {{"Can not create image of closed window".throw;}});
+    image = Image.fromWindow(w).write(filePath);
+    "-----PLOTTED_IMAGE_%-----".format(filePath).postln;
+    image;
+}};
+""".format()
+
 EXEC_WRAPPER = partial(
     """
 var cwd = "{cwd}";
+{plot_helper}
+
 {{
     var result;
     "**** JUPYTER ****".postln;
@@ -28,23 +47,24 @@ var cwd = "{cwd}";
     postf("-> %%\n", result);
     "**** /JUPYTER ****".postln;
 }}.fork(AppClock);
-""".format,  # noja
+""".format,  # noqa
     cwd=os.getcwd(),
+    plot_helper="" if os.environ.get("NO_QT") else PLOT_HELPER,
 )
 
 SEARCH_CLASSES = partial(
     """
 var getClasses = {{|t|
-	var res = [];
-	if(t.size>2, {{
-		Class.allClasses.do({{ |class|
-			var name = class.name.asString;
-			if (name.beginsWith(t)) {{
-				res = res.add(name);
-			}};
-		}});
-	}});
-	res.cs;
+    var res = [];
+    if(t.size>2, {{
+        Class.allClasses.do({{ |class|
+            var name = class.name.asString;
+            if (name.beginsWith(t)) {{
+                res = res.add(name);
+            }};
+        }});
+    }});
+    res.cs;
 }};
 getClasses.("{search_term}");
 """.format  # noqa
@@ -86,9 +106,7 @@ class SCKernel(ProcessMetaKernel):
     SC_VERSION_REGEX = re.compile(r"sclang (\d+(\.\d+)+)")
     METHOD_EXTRACTOR_REGEX = re.compile(r"([A-Z]\w*)\.(.*)")
     RECORD_MAGIC_REGEX = re.compile(r"%%\s?record \"?([\w \.]*)\"?")
-    PLOT_MAGIC_REGEX = re.compile(
-        r"%%\s?plot \"(?P<filename>[\w \.]*)\"\ (?P<window_variable>\w*)"
-    )
+    PLOT_REGEX = re.compile(r"-{5}PLOTTED_IMAGE_(?P<ImagePath>.*)-{5}")
 
     @property
     def language_version(self):
@@ -102,10 +120,8 @@ class SCKernel(ProcessMetaKernel):
         super().__init__(*args, **kwargs)
         self._sclang_path = self._get_sclang_path()
         self.__sclang: Optional[REPLWrapper] = None
-        self.__sc_classes: Optional[List[str]] = None
         self.wrapper = self._sclang
         self.recording_paths = set()
-        self.images_to_display: Set[str] = ()
 
     @staticmethod
     def _get_sclang_path() -> str:
@@ -149,21 +165,6 @@ class SCKernel(ProcessMetaKernel):
             # remove magic from code execution
             code = self.RECORD_MAGIC_REGEX.sub("", code)
 
-        for plot_filename, plot_window in self.PLOT_MAGIC_REGEX.findall(code):
-            plot_file_path = os.path.join(os.getcwd(), plot_filename)
-            plotting_code = """
-            if({variable}.class.asSymbol == 'Plotter', {{
-                Image.fromWindow({variable}.parent);
-            }}, {{
-                Image.fromWindow({variable});
-            }}).write("{filename}");
-            """.format(
-                variable=plot_window, filename=plot_file_path
-            )
-            code = code + plotting_code
-            code = self.PLOT_MAGIC_REGEX.sub("", code)
-            self.images_to_display.add(plot_file_path)
-
         return super().do_execute_direct(
             code=code,
             silent=silent,
@@ -203,24 +204,19 @@ class SCKernel(ProcessMetaKernel):
                 displayed_recordings.append(recording_path)
         self.recording_paths.difference_update(displayed_recordings)
 
-    def _check_for_plot(self, message):
-        for image_path in self.images_to_display:
+    def _check_for_plot(self, message: str) -> str:
+        image_path: str
+        for image_path in self.PLOT_REGEX.findall(message):
+            # in case the helper function gets printed
+            if image_path == "%":
+                continue
             self.Display(Image(filename=image_path))
-        self.images_to_display = set()
+        return self.PLOT_REGEX.sub("", message)
 
     def Write(self, message):
         self._check_for_recordings(message)
-        self._check_for_plot(message)
+        message = self._check_for_plot(message)
         super().Write(message)
-
-    @property
-    def _sc_classes(self) -> List[str]:
-        if self.__sc_classes:
-            return self.__sc_classes
-        self.__sc_classes = self._sclang.run_command(
-            "Class.allClasses.do({|c| c.postln; nil;})\n"
-        ).split("\n")[:-1]
-        return self.__sc_classes  # type: ignore
 
     @staticmethod
     def extract_class_name(obj: str) -> str:
@@ -338,7 +334,6 @@ class ScREPLWrapper(REPLWrapper):
             output += self.child.readline().replace("\r\n", "\n")
             # add red color for fail
             output = f"{BgColors.FAIL} {output} {BgColors.END}"
-
         return output
 
     @staticmethod
