@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0
+
+* Replace `setup.py` to `pyproject.toml`
+* Update dependencies to support Jupyter Lab 4
+
 ## 0.4.0
 
 * Introduce real time collaboration
